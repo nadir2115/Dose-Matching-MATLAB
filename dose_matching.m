@@ -7,7 +7,7 @@ patChar = readtable('PatientCharacteristics_withDose.csv');         %Demographic
 
 %variables
 thresh= 27;
-replace= 1;
+replace= 0;
 onehotencode= 0;
 
 cd 'C:\Users\nadir\Desktop\Matching\Matlab'
@@ -43,13 +43,18 @@ vis1TreatedData= visit1Mat(treatedIndex,1:end-1);                   %Separating 
 vis1ControlData= visit1Mat(unmatchedControlIndex,1:end-1);          %Separating controls(to match to treated group)
 
 %% EUCLIDIAN DISTANCE MATCHING-----------------------------------------------
+controlDataTemp = vis1ControlData;
 for i= 1:size(vis1TreatedData,1)
-    dist=1000;
-    for j = 1:size(vis1ControlData,1)                              
-       if pdist2(vis1TreatedData(i,:),vis1ControlData(j,:))<dist            
-           dist= pdist2(vis1TreatedData(i,:),vis1ControlData(j,:));	%new lowest distance 
+    dist=1000; 
+    for j = 1:size(controlDataTemp,1)                              
+       if pdist2(vis1TreatedData(i,:),controlDataTemp(j,:))<dist            
+           dist= pdist2(vis1TreatedData(i,:),controlDataTemp(j,:));	%new lowest distance 
            matchedSubIndex_e(i,:)= [j dist];                       	%Matched control sub-index + match distance                           
        end
+    end
+    if replace==0                                                   %If without replacement
+       controlDataTemp(matchedSubIndex_e(i,1),:)= 50*...
+           ones(1,size(controlDataTemp,2));                         %Make used control unmatchable
     end
 end
 matchedControlIndex_e = unmatchedControlIndex(matchedSubIndex_e(:,1));
@@ -63,7 +68,8 @@ medianControlEffect_e= median(effectControl);                       %Meidan impr
 effectsHistogram(effectTreated, effectControl, "Eucladian")
 h
 p
-clear h p i j dist;                                                 
+
+clear h p i j dist controlDataTemp;                                                 
 V1data_Treated= visit1MatNotNormalized(treatedIndex,:);
 V1data_UnmatchedControl= visit1MatNotNormalized(unmatchedControlIndex,:);
 V1data_MatchedControl_e= visit1MatNotNormalized(matchedControlIndex_e,:);
@@ -87,11 +93,12 @@ propScore= sigmoid(X*theta);                                        %Calculate P
 caliper= 0.2*std(logit(propScore));                                 %Calculate calipers 
 matchedSubIndex_incaliper=[];
 
+tempPropScore=propScore;
 for i= 1:size(treatedIndex)                                         %MATCHING
     dist=1000;
-    logiti= logit(propScore(treatedIndex(i)));
+    logiti= logit(tempPropScore(treatedIndex(i)));
     for j = 1:size(unmatchedControlIndex)   
-        logitj= logit(propScore(unmatchedControlIndex(j)));
+        logitj= logit(tempPropScore(unmatchedControlIndex(j)));
         if pdist2(logiti,logitj)<dist 
             dist= pdist2(logiti,logitj);
             matchedSubIndex_p(i,:)= [j dist];
@@ -101,6 +108,10 @@ for i= 1:size(treatedIndex)                                         %MATCHING
     if matchedSubIndex_p(i,2)<caliper 
         matchedSubIndex_incaliper= [matchedSubIndex_incaliper; i];	%store index of matches w/in calipers
     end  
+    if replace==0                                                   %If without replacement
+        tempPropScore(unmatchedControlIndex(...
+            matchedSubIndex_p(i,1)))= 0;                           %make used prop score unmatchable
+    end
 end
 %Redifining new treatment and control groups with calipers
 matchedSubIndex_p= matchedSubIndex_p(matchedSubIndex_incaliper, :); %subset control sub-index with calipers
@@ -109,6 +120,7 @@ matchedControlIndex_p = unmatchedControlIndex(...
     matchedSubIndex_p(:,1),:);                                      %main dataset index for matched control
 assessBalance(treatedIndex_incaliper_p, unmatchedControlIndex, ...
     matchedControlIndex_p, "Propensity score", visit1Mat)           %Visually evaluate balance
+
 %Testing effect
 [h, p, effectTreated, effectControl]= ttestImprovement (...
     treatedIndex_incaliper_p, matchedControlIndex_p, visit1Mat, visit2Mat);
@@ -117,32 +129,42 @@ medianControlEffect_p= median(effectControl);                       %Median impr
 effectsHistogram(effectTreated, effectControl, "Propensity")
 h
 p
-clear i j k p h propData theta initial_theta X y m n options cost grad logiti logitj dist
+clear i j k p h propData theta initial_theta X y m n options cost grad logiti logitj dist tempPropScore
 V1data_MatchedControl_p= visit1MatNotNormalized(matchedControlIndex_p,:);
 V1data_Treated_p=  visit1MatNotNormalized(treatedIndex_incaliper_p,:);
 
 %% MAHALANOBIS DISTANCE MATCHING
 if onehotencode==0
-    matchedSubIndex_m=[]; 
+%     matchedSubIndex_m=[]; 
+    controlDataTemp = vis1ControlData;                            	
     for i= 1:size(treatedIndex)
         dist=100000;
-        for j = 1:size(vis1ControlData)   
-            if sqrt((vis1TreatedData(i,:)-vis1ControlData(j,:))*inv(cov(visit1Mat(:,1:end-1)))*(vis1TreatedData(i,:)-vis1ControlData(j,:))')<dist 
-                dist= sqrt((vis1TreatedData(i,:)-vis1ControlData(j,:))*inv(cov(visit1Mat(:,1:end-1)))*(vis1TreatedData(i,:)-vis1ControlData(j,:))');
+        for j = 1:size(controlDataTemp)   
+            if sqrt((vis1TreatedData(i,:)-controlDataTemp(j,:))*inv(cov(visit1Mat(:,1:end-1)))*...
+                    (vis1TreatedData(i,:)-controlDataTemp(j,:))')<dist 
+                dist= sqrt((vis1TreatedData(i,:)-controlDataTemp(j,:))*...
+                    inv(cov(visit1Mat(:,1:end-1)))*(vis1TreatedData(i,:)-controlDataTemp(j,:))');
                 matchedSubIndex_m(i,:)= [j,dist];   
             end
         end
+        
+       if replace==0                                            	%If without replacement
+           controlDataTemp(matchedSubIndex_m(i,1),:)= 50*...
+           ones(1,size(controlDataTemp,2));                       	%Make used control unmatchable
+       end
+        
     end
     matchedControlIndex_m = unmatchedControlIndex(matchedSubIndex_m(:,1),:);
     assessBalance(treatedIndex, unmatchedControlIndex,...
-        matchedControlIndex_m,"Mahalanobis", visit1Mat)              	%Visually evaluate balance 
-
+        matchedControlIndex_m,"Mahalanobis", visit1Mat)           	%Visually evaluate balance 
+    %Testing effect
     [h, p, effectTreated, effectControl]= ttestImprovement (...
         treatedIndex, matchedControlIndex_m, visit1Mat, visit2Mat);
     effectsHistogram(effectTreated, effectControl, "Mahalanobis")
     h
     p
-    clear h p matchedSubIndex_m i j k;             % clearing varaiables
+    
+    clear h p matchedSubIndex_m i j dist controlDataTemp;           	 
     V1data_MatchedControl_m= visit1MatNotNormalized(matchedControlIndex_m,:);
     unique_mahalanobis_controls= length(unique(matchedControlIndex_m))
     
@@ -151,19 +173,23 @@ end
 unique_euclidean_controls= length(unique(matchedControlIndex_e))
 unique_propensity_controls= length(unique(matchedControlIndex_p))
 
-
 %Mean of variates, and ttest results before and after matching
-MatchingEffects(:,1)= mean(V1data_Treated);
-MatchingEffects(:,2)= mean(V1data_UnmatchedControl);
-[MatchingEffects(:,3),MatchingEffects(:,4)] = ttest2(V1data_Treated,V1data_UnmatchedControl);           
-MatchingEffects(:,5)= mean(V1data_MatchedControl_e);
-[MatchingEffects(:,6),MatchingEffects(:,7)] = ttest2(V1data_Treated,V1data_MatchedControl_e); 
-MatchingEffects(:,8)= mean(V1data_Treated_p);
-MatchingEffects(:,9)= mean(V1data_MatchedControl_p);
-[MatchingEffects(:,10),MatchingEffects(:,11)] = ttest2(V1data_Treated_p,V1data_MatchedControl_p); 
+MatchEffect(:,1)= mean(V1data_Treated);
+MatchEffect(:,2)= mean(V1data_UnmatchedControl);
+[MatchEffect(:,3),MatchEffect(:,4)] = ...
+    ttest2(V1data_Treated,V1data_UnmatchedControl);           
+MatchEffect(:,5)= mean(V1data_MatchedControl_e);
+[MatchEffect(:,6),MatchEffect(:,7)] = ...
+    ttest2(V1data_Treated,V1data_MatchedControl_e); 
+MatchEffect(:,8)= mean(V1data_Treated_p);
+MatchEffect(:,9)= mean(V1data_MatchedControl_p);
+[MatchEffect(:,10),MatchEffect(:,11)] = ...
+    ttest2(V1data_Treated_p,V1data_MatchedControl_p); 
 if onehotencode==0
-MatchingEffects(:,12)= mean(V1data_MatchedControl_m);
-[MatchingEffects(:,13),MatchingEffects(:,14)] = ttest2(V1data_Treated,V1data_MatchedControl_m); 
+    MatchEffect(:,12)= mean(V1data_Treated);
+    MatchEffect(:,13)= mean(V1data_MatchedControl_m);
+    [MatchEffect(:,14),MatchEffect(:,15)] = ...
+        ttest2(V1data_Treated,V1data_MatchedControl_m); 
 end
 
 

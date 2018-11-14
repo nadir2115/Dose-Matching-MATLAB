@@ -7,7 +7,7 @@ patChar = readtable('PatientCharacteristics_withDose.csv');         %Demographic
 
 %variables
 thresh= 27;
-replace= 1;
+replace= 0;
 onehotencode= 0;
 
 cd 'C:\Users\nadir\Desktop\Matching\Matlab'
@@ -43,13 +43,18 @@ vis1TreatedData= visit1Mat(treatedIndex,1:end-1);                   %Separating 
 vis1ControlData= visit1Mat(unmatchedControlIndex,1:end-1);          %Separating controls(to match to treated group)
 
 %% EUCLIDIAN DISTANCE MATCHING-----------------------------------------------
+controlDataTemp = vis1ControlData;
 for i= 1:size(vis1TreatedData,1)
-    dist=1000;
-    for j = 1:size(vis1ControlData,1)                              
-       if pdist2(vis1TreatedData(i,:),vis1ControlData(j,:))<dist            
-           dist= pdist2(vis1TreatedData(i,:),vis1ControlData(j,:));	%new lowest distance 
+    dist=1000; 
+    for j = 1:size(controlDataTemp,1)                              
+       if pdist2(vis1TreatedData(i,:),controlDataTemp(j,:))<dist            
+           dist= pdist2(vis1TreatedData(i,:),controlDataTemp(j,:));	%new lowest distance 
            matchedSubIndex_e(i,:)= [j dist];                       	%Matched control sub-index + match distance                           
        end
+    end
+    if replace==0                                                   %If without replacement
+       controlDataTemp(matchedSubIndex_e(i,1),:)= 50*...
+           ones(1,size(controlDataTemp,2));                         %Making picked control unmatchable
     end
 end
 matchedControlIndex_e = unmatchedControlIndex(matchedSubIndex_e(:,1));
@@ -63,7 +68,8 @@ medianControlEffect_e= median(effectControl);                       %Meidan impr
 effectsHistogram(effectTreated, effectControl, "Eucladian")
 h
 p
-clear h p i j dist;                                                 
+
+clear h p i j dist controlDataTemp;                                                 
 V1data_Treated= visit1MatNotNormalized(treatedIndex,:);
 V1data_UnmatchedControl= visit1MatNotNormalized(unmatchedControlIndex,:);
 V1data_MatchedControl_e= visit1MatNotNormalized(matchedControlIndex_e,:);
@@ -123,26 +129,36 @@ V1data_Treated_p=  visit1MatNotNormalized(treatedIndex_incaliper_p,:);
 
 %% MAHALANOBIS DISTANCE MATCHING
 if onehotencode==0
-    matchedSubIndex_m=[]; 
+%     matchedSubIndex_m=[]; 
+    controlDataTemp = vis1ControlData;                            	
     for i= 1:size(treatedIndex)
         dist=100000;
-        for j = 1:size(vis1ControlData)   
-            if sqrt((vis1TreatedData(i,:)-vis1ControlData(j,:))*inv(cov(visit1Mat(:,1:end-1)))*(vis1TreatedData(i,:)-vis1ControlData(j,:))')<dist 
-                dist= sqrt((vis1TreatedData(i,:)-vis1ControlData(j,:))*inv(cov(visit1Mat(:,1:end-1)))*(vis1TreatedData(i,:)-vis1ControlData(j,:))');
+        for j = 1:size(controlDataTemp)   
+            if sqrt((vis1TreatedData(i,:)-controlDataTemp(j,:))*inv(cov(visit1Mat(:,1:end-1)))*...
+                    (vis1TreatedData(i,:)-controlDataTemp(j,:))')<dist 
+                dist= sqrt((vis1TreatedData(i,:)-controlDataTemp(j,:))*...
+                    inv(cov(visit1Mat(:,1:end-1)))*(vis1TreatedData(i,:)-controlDataTemp(j,:))');
                 matchedSubIndex_m(i,:)= [j,dist];   
             end
         end
+        
+       if replace==0                                            	%If without replacement
+           controlDataTemp(matchedSubIndex_m(i,1),:)= 50*...
+           ones(1,size(controlDataTemp,2));                       	%Make picked control unmatchable
+       end
+        
     end
     matchedControlIndex_m = unmatchedControlIndex(matchedSubIndex_m(:,1),:);
     assessBalance(treatedIndex, unmatchedControlIndex,...
-        matchedControlIndex_m,"Mahalanobis", visit1Mat)              	%Visually evaluate balance 
-
+        matchedControlIndex_m,"Mahalanobis", visit1Mat)           	%Visually evaluate balance 
+    %Testing effect
     [h, p, effectTreated, effectControl]= ttestImprovement (...
         treatedIndex, matchedControlIndex_m, visit1Mat, visit2Mat);
     effectsHistogram(effectTreated, effectControl, "Mahalanobis")
     h
     p
-    clear h p matchedSubIndex_m i j k;             % clearing varaiables
+    
+    clear h p matchedSubIndex_m i j dist controlDataTemp;           	 
     V1data_MatchedControl_m= visit1MatNotNormalized(matchedControlIndex_m,:);
     unique_mahalanobis_controls= length(unique(matchedControlIndex_m))
     
@@ -162,8 +178,9 @@ MatchingEffects(:,8)= mean(V1data_Treated_p);
 MatchingEffects(:,9)= mean(V1data_MatchedControl_p);
 [MatchingEffects(:,10),MatchingEffects(:,11)] = ttest2(V1data_Treated_p,V1data_MatchedControl_p); 
 if onehotencode==0
-MatchingEffects(:,12)= mean(V1data_MatchedControl_m);
-[MatchingEffects(:,10),MatchingEffects(:,11)] = ttest2(V1data_Treated_p,V1data_MatchedControl_p); 
+    MatchingEffects(:,12)= mean(V1data_Treated);
+    MatchingEffects(:,13)= mean(V1data_MatchedControl_m);
+    [MatchingEffects(:,14),MatchingEffects(:,15)] = ttest2(V1data_Treated,V1data_MatchedControl_m); 
 end
 
 

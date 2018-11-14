@@ -34,7 +34,6 @@ clear ev2_temp
 writetable(datav2,"Data for visit 2.csv");
 
 dv1=tabnum_reducedfeatures(datav1); %converting table to array of numbers
-% dv1=table2numarray(datav1); %converting table to array of numbers
 dv1= fixMissingValues(dv1); %fixing missing valuest
 dv1= [dv1(:,1:13) dv1(:,15:end) dv1(:,14)]; %moving dose hours to end
 dv1(:,1)= []; %Removing PID column
@@ -42,7 +41,6 @@ dv1_wo_normalize= dv1;
 dv1= [normalize_data(dv1(:,1:size(dv1,2)-1)) dv1(:,size(dv1,2))];  %Using custom function to normalize data
 
 dv2=tabnum_reducedfeatures(datav2); %converting table to array of numbers
-% dv2=table2numarray(datav2); %converting table to array of numbers
 dv2= fixMissingValues(dv2); %fixing missing valuest
 dv2= [dv2(:,1:13) dv2(:,15:end) dv2(:,14)]; %moving dose hours to end
 dv2(:,1)= []; %Removing PID column
@@ -58,8 +56,7 @@ dv1c= dv1(control,1:end-1);
 %% EUCLIDIAN DISTANCE MATCHING-----------------------------------------------
 for i= 1:size(dv1t,1)
     k=10000;
-    for j = 1:size(dv1c,1)                              %matching with replacement
-%         if pdist2(dv1t(i,:),dv1c(j,:), Euclidean, @nanhamdist)<k   %nanhamdist accounts for NAN values
+    for j = 1:size(dv1c,1)                              
         if pdist2(dv1t(i,:),dv1c(j,:))<k            
             matched_index(i,1)= j;
             k= pdist2(dv1t(i,:),dv1c(j,:));
@@ -117,11 +114,11 @@ prop_score_original= prop_score
 %MATCHING
 for i= 1:size(treat)
     k=1000;
-    for j = 1:size(control)   %matching with replacement
+    for j = 1:size(control)   
         logiti= log10(prop_score(treat(i))/(1-prop_score(treat(i))));
         logitj= log10(prop_score(control(j))/(1-prop_score(control(j))));
         
-        if pdist2(logiti,logitj)<k %nanhamdist accounts for NAN values
+        if pdist2(logiti,logitj)<k 
             matched_index_p(i,1)= j;
             k= pdist2(logiti,logitj);
             matched_index_p(i,2)= k;   %for checking error value
@@ -151,9 +148,6 @@ d1m_control_p= dv1_wo_normalize(matched_control_p,:);
 %% 
 unique_euclidean_controls= length(unique(matched_control_e))
 unique_propensity_controls= length(unique(matched_control_p))
-% % for first one TREAT OR CONTROL???
-% prop_variance_r_e=  var(prop_score(treat))./ var(prop_score(matched_control_e))
-% prop_variance_r_p=  var(prop_score_original(treat_new))./ var(prop_score_original(matched_control_p))
 
 %Mean of variates
 X1(:,1)= mean(d1treat);
