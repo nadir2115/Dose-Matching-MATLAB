@@ -3,7 +3,7 @@ function multihist(data)
 
 m= size(data,1);
 n= size(data,2);
-figure
+figure('units','normalized','outerposition',[0 0 1 1])
 
 if n>20 %labels for one-hot-encoding
 labels= ["EQ INDEX","SIS hand","ufugm","ufugmcat","RNLIadj","NIHtot",...

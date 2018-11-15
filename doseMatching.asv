@@ -134,7 +134,7 @@ V1data_MatchedControl_p= visit1MatNotNormalized(matchedControlIndex_p,:);
 V1data_Treated_p=  visit1MatNotNormalized(treatedIndex_incaliper_p,:);
 
 %% MAHALANOBIS DISTANCE MATCHING
-if onehotencode==0                                                  %Mah. dist works for only cont. var(s)
+if onehotencode==0                                                  %Mah. distance doesn't work for categorical
     controlDataTemp = vis1ControlData;                            	
     for i= 1:size(treatedIndex)
         dist=100000;
