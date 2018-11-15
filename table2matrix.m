@@ -1,18 +1,18 @@
-function array= table2matrix(datav1, onehotencode)
-[m, n]=size(datav1);
+function matrix= table2matrix(dataVisit1, onehotencode)
+[m, n]=size(dataVisit1);
 
- % Converting numerical values labeled as strings to double
+ % Convert numerical values labeled as strings to double
 for i = 2:12     %Matlab can only do one variable at a time??? Review
-datav1.(i)= str2double(datav1.(i)); 
+dataVisit1.(i)= str2double(dataVisit1.(i)); 
 end
 
-% Split tables to 4 arrays with specific data types
-dv1a= table2array(datav1(:,1)); 
-dv1b= table2array(datav1(:,2:12));
-dv1c= table2array(datav1(:,13)); 
-dv1d= table2array(datav1(:,14:n));
+% Split tables to 4 matrixs with specific data types
+dv1a= table2matrix(dataVisit1(:,1)); 
+dv1b= table2matrix(dataVisit1(:,2:12));
+dv1c= table2matrix(dataVisit1(:,13)); 
+dv1d= table2matrix(dataVisit1(:,14:n));
 
-%Converting columns into double types
+% Convert columns into double types
 x=char(dv1a);       
 d1a= str2num(x(:,2:7));                 %Convert PID to numbers removing first and last 2 letters
 d1c(dv1c=="H")=1;   d1c=d1c';         	%Convert severity to integer, H=1, L=0
@@ -55,7 +55,7 @@ elseif onehotencode==0
     d(:,[5 13 15:23 25 27])=[];         %Removing categorical columns
     d= [d(:,1:11) d(:,13:end) d(:,12)]; %move dose hours to last column
 end
-array= d;
+matrix= d;
 
 
     
