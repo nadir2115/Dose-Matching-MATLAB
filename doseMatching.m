@@ -8,7 +8,7 @@ patChar = readtable('PatientCharacteristics_withDose.csv');         % Demographi
 % variables
 thresh= 27;
 replace= 1;
-onehotencode= 1;
+onehotencode= 0;
 
 cd 'C:\Users\nadir\Desktop\Matching\Matlab'
 patChar.Properties.VariableNames([6]) = {'pid'};                    % Change column name: "PID" to "pid"
