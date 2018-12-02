@@ -174,20 +174,20 @@ unique_propensity_controls= length(unique(matchedControlIndex_p))
 MatchEffect(:,1)= mean(V1data_Treated);
 MatchEffect(:,2)= mean(V1data_UnmatchedControl);
 [MatchEffect(:,3),MatchEffect(:,4)] = ...
-    ttest2(V1data_Treated,V1data_UnmatchedControl);           
+    similarityTest(V1data_Treated,V1data_UnmatchedControl);           
 MatchEffect(:,5)= mean(V1data_MatchedControl_e);
 [MatchEffect(:,6),MatchEffect(:,7)] = ...
-    ttest2(V1data_Treated,V1data_MatchedControl_e); 
+    similarityTest(V1data_Treated,V1data_MatchedControl_e); 
 MatchEffect(:,8)= mean(V1data_Treated_p);
 MatchEffect(:,9)= mean(V1data_MatchedControl_p);
 [MatchEffect(:,10),MatchEffect(:,11)] = ...
-    ttest2(V1data_Treated_p,V1data_MatchedControl_p); 
+    similarityTest(V1data_Treated_p,V1data_MatchedControl_p); 
 
 if onehotencode==0                                                  %Mah. distance used
     MatchEffect(:,12)= mean(V1data_Treated);
     MatchEffect(:,13)= mean(V1data_MatchedControl_m);
     [MatchEffect(:,14),MatchEffect(:,15)] = ...
-        ttest2(V1data_Treated,V1data_MatchedControl_m); 
+        similarityTest(V1data_Treated,V1data_MatchedControl_m); 
     
     multihist(V1data_MatchedControl_m)
     saveas(gcf,'matched control maha Visit1.jpg')
