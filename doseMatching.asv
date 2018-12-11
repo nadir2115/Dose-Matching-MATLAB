@@ -147,12 +147,11 @@ if onehotencode==0                                                  %Mah. dist w
                     (vis1TreatedData(i,:)-controlDataTemp(j,:))')<dist 
                 dist= sqrt((vis1TreatedData(i,:)-controlDataTemp(j,:))*...
                     inv(cov(visit1Mat(:,1:end-1)))*(vis1TreatedData(i,:)-controlDataTemp(j,:))');
-                matchedSubIndex_m(i,:)= [j,dist];
-                logitj_best=logitj;
+                matchedSubIndex_m(i,:)= [j,dist];   
             end
-        end
-        if pdist2(logiti,logitj_best)<caliper
+            if pdist2(logiti,logitj)<caliper
                  matchedSubIndex_incaliper= [matchedSubIndex_incaliper; i];
+            end
         end
        if replace==0                                            	% If without replacement
            controlDataTemp(matchedSubIndex_m(i,1),:)= 50*...

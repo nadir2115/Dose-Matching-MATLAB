@@ -12,6 +12,3 @@ for i=1:n
         [h(i),p(i)]= ttest2(sample1(:,i),sample2(:,i));      
     end
 end
-
-
-        
